@@ -4,10 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 
 public class PuzzleSubImage extends ImageIcon {
-    Integer id = null;
+    public Integer id = null;
 
-    PuzzleSubImage(Image image, Integer id) {
+    public PuzzleSubImage(Image image, Integer id) {
         super(image);
-        id = id;
+        this.id = id;
+    }
+
+    public Integer getId() {
+        return id;
     }
 }

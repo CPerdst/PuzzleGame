@@ -29,6 +29,7 @@ public class ImageUtilityImpl implements ImageDivided {
         if(image == null || rows <= 0 || cols <= 0) {
             return null;
         }
+        dividedImages = new SubImageIconList();
         int width = image.getWidth();
         int height = image.getHeight();
         int subWidth = width / cols;

@@ -7,8 +7,11 @@ import java.io.IOException;
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
 public class Main {
     public static void main(String[] args) throws IOException {
-        new LoginJFrame();
+//        new LoginJFrame();
 //        new RegisterJFrame();
         new GameJFrame();
+//        double x1 = 0, y1 = 0, x2 = -1, y2 = 0;
+//        Math.toDegrees(Math.tan2(y2 - y1, x2 - x1));
+//        System.out.println();
     }
 }
