@@ -1,47 +1,71 @@
 package com.l1akr.puzzle.ui.game;
 
+import com.l1akr.puzzle.config.GameMode;
+import com.l1akr.puzzle.config.GlobalConfig;
 import com.l1akr.puzzle.utility.ImageUtilityImpl;
 import com.l1akr.puzzle.utility.PuzzleSubImage;
 import com.l1akr.puzzle.utility.SubImageIconList;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 public class PuzzleJPanel extends JPanel {
-    SubImagePanelList subImagePanelList = null;
+    private SubImagePanelList subImagePanelList = null;
 
-    int subImagePanelPressedIdx1 = -1;
-    int subImagePanelPressedIdx2 = -1;
+    private int subImagePanelPressedIdx1 = -1;
+    private int subImagePanelPressedIdx2 = -1;
 
-    Boolean isDragging = false;
-    AbstractMap.SimpleEntry<Integer, Integer> dragBeginPos = null;
-    AbstractMap.SimpleEntry<Integer, Integer> dragEndPos = null;
+    private Boolean isDragging = false;
+    private AbstractMap.SimpleEntry<Integer, Integer> dragBeginPos = null;
+    private AbstractMap.SimpleEntry<Integer, Integer> dragEndPos = null;
 
     // 是否按住A键
-    Boolean isHoldingA = false;
+    private Boolean isHoldingA = false;
 
-    Boolean test = false;
+    private Boolean test = false;
 
-    PuzzleJPanel() throws IOException{
-        this(500, 500, "/Users/zwj1/Pictures/IMG_20241123_103909.jpg", 4, 4, 500, 500);
+    private PuzzlePanelGameListener puzzlePanelGameListener = null;
+
+    private int rows;
+    private int cols;
+
+    private int scaledImageWidth;
+    private int scaledImageHeight;
+
+    private int panelWidth;
+    private int panelHeight;
+
+    PuzzleJPanel() throws IOException, InterruptedException {
+        this(500, 500, "/Users/zwj1/Pictures/IMG_20241123_103909.jpg", 4, 4, 500, 500, null);
     }
 
-    PuzzleJPanel(int panelWidth, int panelHeight, String imagePath, int rows, int cols, int scaledImageWidth, int scaledImageHeight) throws IOException {
+    PuzzleJPanel(String filePath) throws IOException, InterruptedException {
+        this(500, 500, filePath, 4, 4, 500, 500, null);
+    }
+
+    PuzzleJPanel(int panelWidth, int panelHeight, String imagePath, int rows, int cols, int scaledImageWidth, int scaledImageHeight, PuzzlePanelGameListener listener) throws IOException, InterruptedException {
         super();
-        init(panelWidth, panelHeight);
+        this.rows = rows;
+        this.cols = cols;
+        this.scaledImageWidth = scaledImageWidth;
+        this.scaledImageHeight = scaledImageHeight;
+        this.puzzlePanelGameListener = listener;
+        this.panelWidth = panelWidth;
+        this.panelHeight = panelHeight;
+        init();
         subImagePanelList = new SubImagePanelList(imagePath, rows, cols, scaledImageWidth, scaledImageHeight);
         // 添加keyBind按键监听
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                super.keyTyped(e);
+                super.keyPressed(e);
                 System.out.println(e.getKeyChar());
                 if(e.getKeyChar() == 'a') {
                     if(!isHoldingA){
@@ -53,7 +77,7 @@ public class PuzzleJPanel extends JPanel {
             }
             @Override
             public void keyReleased(KeyEvent e) {
-                super.keyTyped(e);
+                super.keyReleased(e);
                 if(e.getKeyChar() == 'a') {
                     if(isHoldingA){
                         isHoldingA = false;
@@ -66,19 +90,20 @@ public class PuzzleJPanel extends JPanel {
             }
         });
         redrawSubImagePanelList();
+        subImagePanelList.shuffleJPanelList(null, null);
     }
 
-    private void init(int width, int height) throws IOException {
+    private void init() throws IOException {
         this.setLayout(null);
-        this.setSize(width, height);
+        this.setSize(panelWidth, panelHeight);
         this.setName("PuzzleJPanel#" + hashCode());
         this.setVisible(true);
-        this.setBounds(0, 0, width, height);
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
+        this.requestFocusInWindow();
     }
 
-    public void redrawSubImagePanelList() {
+    private void redrawSubImagePanelList() {
         if(subImagePanelList == null
                 || subImagePanelList.getPanelList() == null
         || subImagePanelList.getPanelList().isEmpty()) {
@@ -97,13 +122,56 @@ public class PuzzleJPanel extends JPanel {
         this.repaint();
     }
 
+    private void exchangeSubImagePanel(AbstractMap.SimpleEntry<Integer, Integer> oldPos,
+                                       AbstractMap.SimpleEntry<Integer, Integer> newPos) throws InterruptedException {
+        if(verifyPointValida(oldPos) && verifyPointValida(newPos)) {
+            int idx1 = oldPos.getKey() * subImagePanelList.cols + oldPos.getValue();
+            int idx2 = newPos.getKey() * subImagePanelList.cols + newPos.getValue();
+            Component[] components = this.getComponents();
+            List<JPanel> panels = this.subImagePanelList.jPanelList;
+
+            int subImageHeight = subImagePanelList.getSubImageIconList().getSubImageHeight();
+            int subImageWidth = subImagePanelList.getSubImageIconList().getSubImageWidth();
+            int topMargin = (this.getHeight() - subImagePanelList.getSubImageIconList().getImageFullHeight()) / 2;
+            int leftMargin = (this.getWidth() - subImagePanelList.getSubImageIconList().getImageFullWidth()) / 2;
+
+            if(Arrays.stream(components).anyMatch(component -> component instanceof JPanel panel
+                    && component.getName().equals("PuzzleSubImageJPanel")
+                    && panel == panels.get(idx1))
+            && Arrays.stream(components).anyMatch(component -> component instanceof JPanel panel
+                    && component.getName().equals("PuzzleSubImageJPanel")
+                    && panel == panels.get(idx2))) {
+                panels.get(idx1).setBounds(newPos.getValue() * subImageWidth + leftMargin,
+                        newPos.getKey() * subImageHeight + topMargin,
+                        subImageWidth,
+                        subImageHeight);
+                panels.get(idx2).setBounds(oldPos.getValue() * subImageWidth + leftMargin,
+                        oldPos.getKey() * subImageHeight + topMargin,
+                        subImageWidth,
+                        subImageHeight);
+
+                Collections.swap(subImagePanelList.jPanelList, idx1, idx2);
+
+                this.revalidate();
+                this.repaint();
+            }
+        }
+    }
+
+    private Boolean verifyPointValida(AbstractMap.SimpleEntry<Integer, Integer> point) {
+        return point.getKey() >= 0 && point.getValue() < subImagePanelList.cols
+                && point.getValue() >= 0 && point.getValue() < subImagePanelList.rows;
+    }
+
     private JPanel getJPanel(int i) {
         JPanel panel = subImagePanelList.jPanelList.get(i);
 
-        int subImageHeight = (subImagePanelList.getScaledImageHeight() / subImagePanelList.getRows());
-        int subImageWidth = (subImagePanelList.getScaledImageWidth() / subImagePanelList.getCols());
-        int subImagePanelTopPos = (i / subImagePanelList.getCols()) * subImageHeight;
-        int subImagePanelLeftPos = (i % subImagePanelList.getCols()) * subImageWidth;
+        int subImageHeight = subImagePanelList.getSubImageIconList().getSubImageHeight();
+        int subImageWidth = subImagePanelList.getSubImageIconList().getSubImageWidth();
+        int topMargin = (this.getHeight() - subImagePanelList.getSubImageIconList().getImageFullHeight()) / 2;
+        int leftMargin = (this.getWidth() - subImagePanelList.getSubImageIconList().getImageFullWidth()) / 2;
+        int subImagePanelTopPos = topMargin + (i / subImagePanelList.getCols()) * subImageHeight;
+        int subImagePanelLeftPos = leftMargin + (i % subImagePanelList.getCols()) * subImageWidth;
 
         panel.setBounds(subImagePanelLeftPos, subImagePanelTopPos, subImageWidth, subImageHeight);
         panel.setVisible(true);
@@ -165,11 +233,11 @@ public class PuzzleJPanel extends JPanel {
         redrawSubImagePanelList();
     }
 
+    // 内部类与接口 //
+
     private class SubImagePanelList {
         private SubImageIconList subImageIconList = null;
         private List<JPanel> jPanelList = new ArrayList<>();
-
-        private SubImagePanelListListener subImagePanelListListener = null;
 
         private int rows;
         private int cols;
@@ -195,9 +263,11 @@ public class PuzzleJPanel extends JPanel {
             this.scaledImageWidth = scaledWidth;
             this.scaledImageHeight = scaledHeight;
             // 初始化子图集,并将图片重缩放多分割存入
+            int containerWidth = scaledWidth; // 为了避免分歧，这里应该传入的是容器的宽高，用于缩放image
+            int containerHeight = scaledHeight;
             subImageIconList = new ImageUtilityImpl()
                     .openImage(filepath)
-                    .scaleImage(scaledWidth, scaledHeight)
+                    .scaleImage(containerWidth, containerHeight)
                     .divideImage(rows, cols).get();
             // 将最后一块子图置换成纯白块
             replaceLastDividedImages();
@@ -207,8 +277,8 @@ public class PuzzleJPanel extends JPanel {
 
         private void replaceLastDividedImages() {
             subImageIconList.getImages().remove(rows * cols - 1);
-            int subImageHeight = scaledImageHeight / rows;
-            int subImageWidth = scaledImageWidth / cols;
+            int subImageHeight = subImageIconList.getSubImageHeight();
+            int subImageWidth = subImageIconList.getSubImageWidth();
             // 创建纯白块
             BufferedImage whiteBlock = new BufferedImage(subImageWidth, subImageHeight, BufferedImage.TYPE_INT_ARGB);
             whiteBlock.getGraphics().setColor(Color.WHITE);
@@ -251,24 +321,68 @@ public class PuzzleJPanel extends JPanel {
                             if (!isDragging) {
                                 isDragging = true;
                                 dragBeginPos = new AbstractMap.SimpleEntry<>(e.getX(), e.getY());
+                                panel.setBorder(BorderFactory.createLoweredBevelBorder());
                             }
                         }
                         @Override
                         public void mouseReleased(MouseEvent e) {
                             super.mouseReleased(e);
+                            int idx = jPanelList.indexOf(panel);
+                            int row = idx / subImagePanelList.getCols();
+                            int col = idx % subImagePanelList.getCols();
+
                             if (isDragging) {
                                 isDragging = false;
                                 dragEndPos = new AbstractMap.SimpleEntry<>(e.getX(), e.getY());
                                 if (getLengthBetweenPoints(dragBeginPos, dragEndPos) > 50) {
-                                    System.out.println("Dragging from " + dragBeginPos + " to " + dragEndPos + "is " + getLengthBetweenPoints(dragBeginPos, dragEndPos));
-
+                                    boolean legal = true;
+                                    AbstractMap.SimpleEntry<Integer, Integer> endPoint = null;
+                                    double degree = getDegreeBetweenPoints(dragBeginPos, dragEndPos);
+                                    if(degree >= -45 && degree < 45){ // →
+                                        System.out.println("→");
+                                        endPoint = new AbstractMap.SimpleEntry<>(row, col + 1);
+                                    }else if(degree >= 45 && degree < 135){ // ↓
+                                        System.out.println("↓");
+                                        endPoint = new AbstractMap.SimpleEntry<>(row + 1, col);
+                                    }else if(degree >= -135 && degree <45){ // ↑
+                                        System.out.println("↑");
+                                        endPoint = new AbstractMap.SimpleEntry<>(row - 1, col);
+                                    }else { // ←
+                                        System.out.println("←");
+                                        endPoint = new AbstractMap.SimpleEntry<>(row, col - 1);
+                                    }
+                                    if(row < 0 || col < 0 || endPoint.getKey() >= rows || endPoint.getValue() >= cols){
+                                        legal = false;
+                                    }
+                                    if(legal){
+                                        System.out.printf("Dragging %s(%d, %d) to %s(%d, %d) is %f\n",
+                                                dragBeginPos, row, col,
+                                                dragEndPos, endPoint.getKey(), endPoint.getValue(),
+                                                getLengthBetweenPoints(dragBeginPos, dragEndPos));
+                                        boolean flag = checkCanSwap(new AbstractMap.SimpleEntry<>(row, col), endPoint);
+//                                        if(flag){
+//                                            Collections.swap(subImagePanelList.getPanelList(), row * cols + col, endPoint.getKey() * cols + endPoint.getValue());
+//                                        }
+                                        if (flag) {
+                                            test = true;
+                                            try {
+                                                exchangeSubImagePanel(new AbstractMap.SimpleEntry<>(row, col), endPoint);
+                                            } catch (InterruptedException ex) {
+                                                throw new RuntimeException(ex);
+                                            }
+//                                            redrawSubImagePanelList();
+                                        }
+                                    }else {
+                                        System.out.printf("Dragging %s(%d, %d) to %s(%d, %d) is illegal\n",
+                                                dragBeginPos, row, col,
+                                                dragEndPos, endPoint.getKey(), endPoint.getValue()
+                                        );
+                                    }
+                                    panel.setBorder(null);
                                     return;
                                 }
                             }
 
-                            int idx = jPanelList.indexOf(panel);
-                            int row = idx / subImagePanelList.getCols();
-                            int col = idx % subImagePanelList.getCols();
                             System.out.println("pressed row: " + row + ", col: " + col);
                             AbstractMap.SimpleEntry<Integer, Integer> curPos = new AbstractMap.SimpleEntry<Integer, Integer>(row, col);
                             if(subImagePanelPressedIdx1 == -1){
@@ -321,8 +435,22 @@ public class PuzzleJPanel extends JPanel {
                             int y1 = pos1.getValue();
                             int x2 = pos2.getKey();
                             int y2 = pos2.getValue();
-//                            Math.toDegrees(Math.tan())
-                            return 1.0;
+                            return Math.toDegrees(Math.atan2(y2 - y1, x2 - x1));
+                        }
+                    });
+                    panel.addMouseMotionListener(new MouseMotionAdapter() {
+                        @Override
+                        public void mouseDragged(MouseEvent e) {
+                            if (!GlobalConfig.gameMode.equals(GameMode.Debug)) {
+                                return;
+                            }
+                            if (dragBeginPos != null) {
+//                                System.out.println("dragBeginPos: " + dragBeginPos);
+                                AbstractMap.SimpleEntry<Integer, Integer> curPoint = new AbstractMap.SimpleEntry<>(e.getX(), e.getY());
+                                Graphics2D g2d = (Graphics2D) panel.getGraphics();
+                                g2d.drawLine(dragBeginPos.getKey(), dragBeginPos.getValue() , curPoint.getKey(), curPoint.getValue());
+                                panel.paintComponents(g2d);
+                            }
                         }
                     });
                     jPanelList.add(panel);
@@ -330,15 +458,60 @@ public class PuzzleJPanel extends JPanel {
             }
         }
 
-        public void shuffleJPanelList() {
-            Collections.shuffle(jPanelList);
+        public SubImagePanelList shuffleJPanelList(Integer deep, SubImagePanelListListener listener) throws InterruptedException {
+            enum Direction {
+                Up, Down, Left, Right
+            }
+            if(deep == null){
+                deep = rows * cols * 3;
+                if(deep.equals(0)){
+                    return this;
+                }
+            }
+            Random rand = new Random();
+            Direction directionCache = null;
+            AbstractMap.SimpleEntry<Integer, Integer> curPoint = new AbstractMap.SimpleEntry<>(cols - 1, rows - 1);
+            AbstractMap.SimpleEntry<Integer, Integer> nxtPoint = null;
+            for(int i = 0; i < deep; i++){
+                while (true) {
+                    // 获取随机上下左右
+                    Direction direction = Direction.values()[rand.nextInt(Direction.values().length)];
+                    // 判断是否可行
+                    if ((direction == Direction.Up && curPoint.getValue() - 1 >= 0)
+                    || (direction == Direction.Down && curPoint.getValue() + 1 < rows)
+                    || (direction == Direction.Left && curPoint.getKey() - 1 >= 0)
+                    || (direction == Direction.Right && curPoint.getKey() + 1 < cols)) {
+                        if (directionCache != null && directionCache == direction) {
+                            continue;
+                        }
+                        if (direction == Direction.Up) {
+                            nxtPoint = new AbstractMap.SimpleEntry<>(curPoint.getKey(), curPoint.getValue() - 1);
+                        }else if (direction == Direction.Down) {
+                            nxtPoint = new AbstractMap.SimpleEntry<>(curPoint.getKey(), curPoint.getValue() + 1);
+                        }else if (direction == Direction.Left) {
+                            nxtPoint = new AbstractMap.SimpleEntry<>(curPoint.getKey() - 1, curPoint.getValue());
+                        }else if (direction == Direction.Right) {
+                            nxtPoint = new AbstractMap.SimpleEntry<>(curPoint.getKey() + 1, curPoint.getValue());
+                        }
+                        directionCache = direction;
+                        // 可行则退出
+                        break;
+                    }
+                }
+                if(listener != null){
+                    listener.onShuffleExchangeSubImage(curPoint, nxtPoint);
+                    curPoint = nxtPoint;
+                    continue;
+                }
+                Collections.swap(jPanelList,
+                        curPoint.getValue() * cols + curPoint.getKey(),
+                        nxtPoint.getValue() * cols + nxtPoint.getKey());
+                curPoint = nxtPoint;
+            }
+            return this;
         }
 
-        public void setSubImagePanelListListener(SubImagePanelListListener subImagePanelListListener) {
-            this.subImagePanelListListener = subImagePanelListListener;
-        }
-
-        public SubImageIconList getSubImagePanelList() {
+        public SubImageIconList getSubImageIconList() {
             return subImageIconList;
         }
 
@@ -367,8 +540,39 @@ public class PuzzleJPanel extends JPanel {
         }
 
         public interface SubImagePanelListListener {
-
+            public abstract void onShuffleExchangeSubImage(AbstractMap.SimpleEntry<Integer, Integer> oldPoint,
+                                                           AbstractMap.SimpleEntry<Integer, Integer> newPoint) throws InterruptedException;
         }
 
+        public abstract class SubImagePanelListListenerAdapter implements SubImagePanelListListener {
+            @Override
+            public void onShuffleExchangeSubImage(AbstractMap.SimpleEntry<Integer, Integer> oldPoint,
+                                                  AbstractMap.SimpleEntry<Integer, Integer> newPoint) {
+                return;
+            }
+        }
+    }
+
+    private interface PuzzlePanelGameListener {
+        public abstract void onPuzzleGameStarted();
+        public abstract void onPuzzleGameWin();
+        public abstract void onPuzzleGameTimeout();
+    }
+
+    public abstract class PuzzlePanelGameListenerAdapter implements PuzzlePanelGameListener {
+        @Override
+        public void onPuzzleGameStarted() {
+            return;
+        }
+
+        @Override
+        public void onPuzzleGameWin() {
+            return;
+        }
+
+        @Override
+        public void onPuzzleGameTimeout() {
+            return;
+        }
     }
 }

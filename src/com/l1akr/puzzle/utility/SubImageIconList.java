@@ -8,6 +8,12 @@ import java.util.List;
 public class SubImageIconList {
     private List<ImageIcon> images = new ArrayList<>();
 
+    private int imageFullWidth;
+    private int imageFullHeight;
+
+    private int subImageWidth;
+    private int subImageHeight;
+
     public SubImageIconList() {}
 
     public void addImage(ImageIcon image) {
@@ -21,5 +27,37 @@ public class SubImageIconList {
 
     public List<ImageIcon> getImages() {
         return images;
+    }
+
+    public int getImageFullWidth() {
+        return imageFullWidth;
+    }
+
+    public int getImageFullHeight() {
+        return imageFullHeight;
+    }
+
+    public int getSubImageWidth() {
+        return subImageWidth;
+    }
+
+    public int getSubImageHeight() {
+        return subImageHeight;
+    }
+
+    public void setImageFullWidth(int imageFullWidth) {
+        this.imageFullWidth = imageFullWidth;
+    }
+
+    public void setImageFullHeight(int imageFullHeight) {
+        this.imageFullHeight = imageFullHeight;
+    }
+
+    public void setSubImageWidth(int subImageWidth) {
+        this.subImageWidth = subImageWidth;
+    }
+
+    public void setSubImageHeight(int subImageHeight) {
+        this.subImageHeight = subImageHeight;
     }
 }

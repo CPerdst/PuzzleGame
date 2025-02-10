@@ -42,6 +42,8 @@ public class ImageUtilityImpl implements ImageDivided {
                 dividedImages.addImage(imageIcon);
             }
         }
+        dividedImages.setSubImageWidth(subWidth);
+        dividedImages.setSubImageHeight(subHeight);
         return this;
     }
 
@@ -49,13 +51,54 @@ public class ImageUtilityImpl implements ImageDivided {
         if(image == null || width <= 0 || height <= 0) {
             return null;
         }
-        BufferedImage scaledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage scaledImage = null;
+        int imageWidth = image.getWidth();
+        int imageHeight = image.getHeight();
+        // 如果image的宽或高大于容器的宽或高，则执行缩
+        if(imageWidth > width || imageHeight > height) {
+            if(imageWidth > width && imageHeight <= height) {
+                // 求取缩后高
+                double scaledHeight = imageHeight * ((double)width / imageWidth);
+                scaledImage = new BufferedImage(width, (int)scaledHeight, BufferedImage.TYPE_INT_RGB);
+            }else if(imageHeight > height && imageWidth <= width) {
+                // 求取缩后宽
+                double scaledWidth = imageWidth * ((double)height / imageHeight);
+                scaledImage = new BufferedImage((int)scaledWidth, height, BufferedImage.TYPE_INT_RGB);
+            }else {
+                // 如果图片宽高都大于容器宽高
+                // 首先将图片高缩放成height，获取缩后宽，看看行不行
+                double scaledWidth = imageWidth * ((double)height / imageHeight);
+                if(scaledWidth <= width) {
+                    // 可以的话，直接用scaledWidth
+                    scaledImage = new BufferedImage((int)scaledWidth, height, BufferedImage.TYPE_INT_RGB);
+                }else {
+                    // 否则就将图片的宽度缩放成width，获取缩后高
+                    double scaledHeight = imageHeight * ((double)width / imageWidth);
+                    scaledImage = new BufferedImage(width, (int)scaledHeight, BufferedImage.TYPE_INT_RGB);
+                }
+            }
+        }else{
+            // 否则执行放
+            // 首先将图片高缩放成height，获取缩后宽，看看行不行
+            double scaledWidth = imageWidth * ((double)height / imageHeight);
+            if(scaledWidth <= width) {
+                // 可以的话，直接用scaledWidth
+                scaledImage = new BufferedImage((int)scaledWidth, height, BufferedImage.TYPE_INT_RGB);
+            }else {
+                // 否则就将图片的宽度缩放成width，获取缩后高
+                double scaledHeight = imageHeight * ((double)width / imageWidth);
+                scaledImage = new BufferedImage(width, (int)scaledHeight, BufferedImage.TYPE_INT_RGB);
+            }
+        }
+        // 执行缩放
         scaledImage.getGraphics().drawImage(image, 0, 0, width, height, null);
         image = scaledImage;
         return this;
     }
 
     public SubImageIconList get() {
+        dividedImages.setImageFullWidth(image.getWidth());
+        dividedImages.setImageFullHeight(image.getHeight());
         return dividedImages;
     }
 

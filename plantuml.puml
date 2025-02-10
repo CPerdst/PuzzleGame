@@ -1,0 +1,106 @@
+@startuml
+
+class PuzzleJPanel {
+    - SubImagePanelList subImagePanelList
+    - int subImagePanelPressedIdx1
+    - int subImagePanelPressedIdx2
+    - Boolean isDragging
+    - AbstractMap.SimpleEntry<Integer, Integer> dragBeginPos
+    - AbstractMap.SimpleEntry<Integer, Integer> dragEndPos
+    - Boolean isHoldingA
+    - Boolean test
+    - PuzzlePanelGameListener puzzlePanelGameListener
+    - int rows
+    - int cols
+    - int scaledImageWidth
+    - int scaledImageHeight
+    - int panelWidth
+    - int panelHeight
+
+    + PuzzleJPanel()
+    + PuzzleJPanel(String filePath)
+    + PuzzleJPanel(int panelWidth, int panelHeight, String imagePath, int rows, int cols, int scaledImageWidth, int scaledImageHeight, PuzzlePanelGameListener listener)
+    - void init()
+    - void redrawSubImagePanelList()
+    - void exchangeSubImagePanel(AbstractMap.SimpleEntry<Integer, Integer> oldPos, AbstractMap.SimpleEntry<Integer, Integer> newPos)
+    - Boolean verifyPointValida(AbstractMap.SimpleEntry<Integer, Integer> point)
+    - JPanel getJPanel(int i)
+    + void addSubImagePanelKeyBindListener(MouseAdapter listener)
+    + void showSubPanelTips()
+    + void closeSubPanelTips()
+    + void autoPuzzle()
+}
+
+class SubImagePanelList {
+    - SubImageIconList subImageIconList
+    - List<JPanel> jPanelList
+    - int rows
+    - int cols
+    - int scaledImageWidth
+    - int scaledImageHeight
+    - String imagePath
+
+    + SubImagePanelList()
+    + SubImagePanelList(String filepath)
+    + SubImagePanelList(String filepath, int rows, int cols, int scaledWidth, int scaledHeight)
+    - void replaceLastDividedImages()
+    - void initJPanelList()
+    + SubImagePanelList shuffleJPanelList(Integer deep, SubImagePanelListListener listener)
+    + SubImageIconList getSubImageIconList()
+    + List<JPanel> getPanelList()
+    + int getRows()
+    + int getCols()
+    + int getScaledImageWidth()
+    + int getScaledImageHeight()
+    + String getImagePath()
+}
+
+class SubImageIconList {
+    - List<ImageIcon> images
+    - int imageFullWidth
+    - int imageFullHeight
+    - int subImageWidth
+    - int subImageHeight
+
+    + SubImageIconList()
+    + void addImage(ImageIcon image)
+    + SubImageIconList shuffleImages()
+    + List<ImageIcon> getImages()
+    + int getImageFullWidth()
+    + int getImageFullHeight()
+    + int getSubImageWidth()
+    + int getSubImageHeight()
+    + void setImageFullWidth(int imageFullWidth)
+    + void setImageFullHeight(int imageFullHeight)
+    + void setSubImageWidth(int subImageWidth)
+    + void setSubImageHeight(int subImageHeight)
+}
+
+interface SubImagePanelListListener {
+    + void onShuffleExchangeSubImage(AbstractMap.SimpleEntry<Integer, Integer> oldPoint, AbstractMap.SimpleEntry<Integer, Integer> newPoint)
+}
+
+abstract class SubImagePanelListListenerAdapter {
+    + void onShuffleExchangeSubImage(AbstractMap.SimpleEntry<Integer, Integer> oldPoint, AbstractMap.SimpleEntry<Integer, Integer> newPoint)
+}
+
+interface PuzzlePanelGameListener {
+    + void onPuzzleGameStarted()
+    + void onPuzzleGameWin()
+    + void onPuzzleGameTimeout()
+}
+
+abstract class PuzzlePanelGameListenerAdapter {
+    + void onPuzzleGameStarted()
+    + void onPuzzleGameWin()
+    + void onPuzzleGameTimeout()
+}
+
+PuzzleJPanel --> SubImagePanelList
+SubImagePanelList --> SubImageIconList
+SubImagePanelList --> SubImagePanelListListener
+SubImagePanelListListener <|.. SubImagePanelListListenerAdapter
+PuzzleJPanel --> PuzzlePanelGameListener
+PuzzlePanelGameListener <|.. PuzzlePanelGameListenerAdapter
+
+@enduml
